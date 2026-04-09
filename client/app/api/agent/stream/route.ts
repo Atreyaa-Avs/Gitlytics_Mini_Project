@@ -3,9 +3,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { thread } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { streamText, convertToModelMessages } from "ai";
+import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
+import { tavilySearchTool } from "@/lib/tools/tavily";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // Determine provider (default to google)
     const selectedProvider = provider || "google";
-    
+
     // Set API key based on provider
     let effectiveApiKey: string | undefined;
     if (selectedProvider === "groq") {
@@ -160,9 +161,10 @@ export async function POST(request: NextRequest) {
     const modelMessages = await convertToModelMessages(messages);
 
     // Determine default model based on provider
-    const defaultModel = selectedProvider === "groq"
-      ? "llama-3.3-70b-versatile"
-      : "gemini-2.5-flash";
+    const defaultModel =
+      selectedProvider === "groq"
+        ? "llama-3.3-70b-versatile"
+        : "gemini-2.5-flash";
     const selectedModel = model || defaultModel;
 
     console.log(
@@ -196,6 +198,20 @@ export async function POST(request: NextRequest) {
         },
         ...modelMessages,
       ],
+      tools: {
+        web_search: tavilySearchTool,
+      },
+      stopWhen: stepCountIs(10), // Allow up to 10 steps of tool execution and continuous generation
+      onStepFinish: (event) => {
+        console.log("[Stream API] Step finished:", {
+          stepType: event.stepType,
+          toolCalls: event.toolCalls?.length || 0,
+          text: event.text?.length || 0,
+        });
+      },
+      onError: (error) => {
+        console.error("[Stream API] Tool execution error:", error);
+      },
     });
 
     console.log("[Stream API] Stream initiated successfully");

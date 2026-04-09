@@ -30,6 +30,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-switch": "^1.2.6",
     "@tabler/icons-react": "^3.41.1",
+    "@tavily/core": "^0.7.2",
     "@types/ws": "^8.18.1",
     "ai": "^6.0.154",
     "better-auth": "^1.6.1",

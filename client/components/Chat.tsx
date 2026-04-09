@@ -6,7 +6,7 @@ import { useThread } from "@/components/ThreadContext";
 import { useChatContext } from "@/components/ChatProvider";
 import { MessageList } from "@/components/MessageList";
 import { MessageInput } from "@/components/MessageInput";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
 export function Chat() {
   const { activeThreadId, createNewThread } = useThread();
@@ -15,16 +15,20 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const chatTransport = new DefaultChatTransport({
-    api: "/api/agent/stream",
-    body: {
-      threadId: activeThreadId,
-      apiKey,
-      model,
-      provider,
-      approveAllTools,
-    },
-  });
+  // Create transport with current model/provider values
+  // useMemo ensures it recreates when dependencies change
+  const chatTransport = useMemo(() => {
+    return new DefaultChatTransport({
+      api: "/api/agent/stream",
+      body: {
+        threadId: activeThreadId,
+        apiKey,
+        model,
+        provider,
+        approveAllTools,
+      },
+    });
+  }, [activeThreadId, apiKey, model, provider, approveAllTools]);
 
   const { messages, status, sendMessage, stop, regenerate } = useChat({
     transport: chatTransport,
@@ -79,23 +83,27 @@ export function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {error && (
-        <div className="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-lg shrink-0">
           <p className="text-sm text-red-600">
             <span className="font-semibold">Error:</span> {error}
           </p>
         </div>
       )}
-      <MessageList messages={messages} isLoading={isLoading} />
-      <MessageInput
-        input={input}
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        isLoading={isLoading}
-        stop={stop}
-        regenerate={regenerate}
-      />
+      <div className="flex-1 overflow-y-auto">
+        <MessageList messages={messages} isLoading={isLoading} />
+      </div>
+      <div className="shrink-0">
+        <MessageInput
+          input={input}
+          handleInputChange={handleInputChange}
+          handleSubmit={handleSubmit}
+          isLoading={isLoading}
+          stop={stop}
+          regenerate={regenerate}
+        />
+      </div>
     </div>
   );
 }

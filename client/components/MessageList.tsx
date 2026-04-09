@@ -1,9 +1,9 @@
 "use client";
 
 import { UIMessage } from "ai";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { AIMessage } from "@/components/AIMessage";
 import { HumanMessage } from "@/components/HumanMessage";
+import { ToolCallMessage } from "@/components/ToolCallMessage";
 import { useEffect, useRef } from "react";
 
 interface MessageListProps {
@@ -12,10 +12,11 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, isLoading }: MessageListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Debug: log all messages to see their structure
+    console.log("[MessageList] Messages:", JSON.stringify(messages, null, 2));
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -30,7 +31,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
   };
 
   return (
-    <ScrollArea className="flex-1 px-4">
+    <div className="px-4">
       <div className="max-w-3xl mx-auto py-4 space-y-6">
         {messages.length === 0 && (
           <div className="text-center py-12">
@@ -44,14 +45,41 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
           </div>
         )}
         {messages.map((message, index) => (
-          <div key={message.id || index}>
+          <div key={message.id || index} className="space-y-2">
             {message.role === "user" ? (
               <HumanMessage content={getMessageText(message)} />
             ) : (
-              <AIMessage
-                content={getMessageText(message)}
-                isLoading={isLoading && index === messages.length - 1}
-              />
+              <>
+                {/* Render tool call parts - format: "tool-{toolName}" */}
+                {message.parts
+                  ?.filter((p) => p.type && p.type.startsWith("tool-"))
+                  .map((part: any, idx) => {
+                    // Extract tool name from type (e.g., "tool-web_search" -> "web_search")
+                    const toolName = part.type.replace("tool-", "");
+                    const isOutputAvailable = part.state === "output-available";
+                    const isInputStreaming = part.state === "input-streaming";
+
+                    return (
+                      <ToolCallMessage
+                        key={idx}
+                        toolName={toolName}
+                        args={part.input || part.args || {}}
+                        result={part.output || part.result}
+                        isPending={
+                          isLoading &&
+                          !isOutputAvailable &&
+                          index === messages.length - 1
+                        }
+                      />
+                    );
+                  })}
+
+                {/* Render text content */}
+                <AIMessage
+                  content={getMessageText(message)}
+                  isLoading={isLoading && index === messages.length - 1}
+                />
+              </>
             )}
           </div>
         ))}
@@ -63,6 +91,6 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
         )}
         <div ref={bottomRef} />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

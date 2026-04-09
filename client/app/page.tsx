@@ -17,8 +17,8 @@ export default function Home() {
             <Sidebar />
           </div>
         )}
-        <div className="flex-1 flex flex-col h-full">
-          <header className="flex items-center gap-2 border-b px-4 py-2">
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <header className="flex items-center gap-2 border-b px-4 py-2 shrink-0">
             {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -29,7 +29,7 @@ export default function Home() {
             )}
             <h1 className="text-lg font-semibold">Gitlytics AI</h1>
           </header>
-          <main className="flex-1">
+          <main className="flex-1 overflow-hidden">
             <Chat />
           </main>
         </div>
